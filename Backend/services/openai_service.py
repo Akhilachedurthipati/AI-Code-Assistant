@@ -5,18 +5,36 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Instantiate the OpenAI client
-# It will load OPENAI_API_KEY from environment or file
+# Instantiate the client (Gemini or OpenAI) using the OpenAI SDK
 api_key = os.getenv("OPENAI_API_KEY")
-client = None
+gemini_key = os.getenv("GEMINI_API_KEY")
 
-if api_key and api_key != "your_api_key_here":
+client = None
+model_name = "gpt-4o-mini"
+
+# Prioritize Gemini API Key if available (offering a free tier)
+if gemini_key and gemini_key != "your_gemini_api_key_here":
+    try:
+        client = OpenAI(
+            api_key=gemini_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+        model_name = "gemini-1.5-flash"
+        print("Using Google Gemini API Client (gemini-1.5-flash). Running free tier AI completions.")
+    except Exception as e:
+        print(f"Error initializing Gemini Client: {e}")
+
+# Fallback to OpenAI Client
+if not client and api_key and api_key != "your_api_key_here":
     try:
         client = OpenAI(api_key=api_key)
+        model_name = "gpt-4o-mini"
+        print("Using OpenAI Client (gpt-4o-mini).")
     except Exception as e:
         print(f"Error initializing OpenAI Client: {e}")
-else:
-    print("Warning: OPENAI_API_KEY is not configured. Mocking API responses.")
+
+if not client:
+    print("Warning: No valid API key (GEMINI_API_KEY or OPENAI_API_KEY) configured. Running in offline/mock mode.")
 
 def call_openai_gpt(prompt: str, system_prompt: str) -> dict:
     """Helper method to invoke chat completion with structured JSON output."""
@@ -25,7 +43,7 @@ def call_openai_gpt(prompt: str, system_prompt: str) -> dict:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model_name,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -147,7 +165,7 @@ def get_chat_response(messages_history: list, new_message: str) -> str:
         messages.append({"role": "user", "content": new_message})
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=model_name,
             messages=messages,
             temperature=0.7
         )
