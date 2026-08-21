@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,11 +7,19 @@ from routes import code_assistant, history, chat
 
 app = FastAPI(title="AI Code Assistant API")
 
-# Configure CORS to allow the React frontend
+# Configure CORS to allow the React frontend dynamically in production
+cors_origins_env = os.getenv("CORS_ORIGINS")
+if cors_origins_env:
+    origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+    allow_all_origins = False
+else:
+    origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    allow_all_origins = True  # Permissive local development fallback
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all_origins else origins,
+    allow_credentials=(not allow_all_origins),  # Wildcards ('*') are not compatible with credentials
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -35,4 +44,6 @@ def health_check():
     return {"status": "ok", "message": "FastAPI is connected and running!"}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8002))
+    uvicorn.run("main:app", host=host, port=port, reload=True)

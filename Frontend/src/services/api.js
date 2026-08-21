@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const base = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = `${base.replace(/\/+$/, "")}/api`;
 
 export async function requestAssistant({ language, feature, code = "", request = "", error = "" }) {
   const response = await fetch(`${API_BASE_URL}/code-assistant`, {
