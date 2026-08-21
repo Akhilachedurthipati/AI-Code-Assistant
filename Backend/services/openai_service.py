@@ -330,8 +330,31 @@ def get_chat_mock_response(messages_history: list, new_message: str) -> str:
                 "```"
             )
 
-    # Default chatbot response for mock fallback
-    else:
+        # Check for other programming languages in mock mode
+        supported_langs = {
+            "c++": ("C++", "```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello from offline mock mode!\\n\";\n    return 0;\n}\n```"),
+            "cpp": ("C++", "```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello from offline mock mode!\\n\";\n    return 0;\n}\n```"),
+            "c#": ("C#", "```csharp\nusing System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello from offline mock mode!\");\n    }\n}\n```"),
+            "csharp": ("C#", "```csharp\nusing System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello from offline mock mode!\");\n    }\n}\n```"),
+            "go": ("Go", "```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from offline mock mode!\")\n}\n```"),
+            "golang": ("Go", "```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from offline mock mode!\")\n}\n```"),
+            "rust": ("Rust", "```rust\nfn main() {\n    println!(\"Hello from offline mock mode!\");\n}\n```"),
+            "typescript": ("TypeScript", "```typescript\nconst message: string = \"Hello from offline mock mode!\";\nconsole.log(message);\n```"),
+            "php": ("PHP", "```php\n<?php\necho \"Hello from offline mock mode!\";\n?>\n```"),
+            "ruby": ("Ruby", "```ruby\nputs \"Hello from offline mock mode!\"\n```"),
+            "sql": ("SQL", "```sql\nSELECT 'Hello from offline mock mode!' AS message;\n```"),
+            "swift": ("Swift", "```swift\nprint(\"Hello from offline mock mode!\")\n```"),
+            "kotlin": ("Kotlin", "```kotlin\nfun main() {\n    println(\"Hello from offline mock mode!\")\n}\n```"),
+        }
+        
+        for lang_key, (lang_name, lang_code) in supported_langs.items():
+            if lang_key in msg_lower:
+                return (
+                    f"I detected you are asking about **{lang_name}**!\n\n"
+                    f"Since the server is running in **offline/mock mode** (no OpenAI API key configured), "
+                    f"here is a sample {lang_name} snippet:\n\n{lang_code}"
+                )
+
         return (
             "Hello! I am your AI Code Assistant chatbot.\n\n"
             "I'm currently running in **offline/mock mode** because no OpenAI API key is configured. "

@@ -25,11 +25,16 @@ export async function requestAssistant({ language, feature, code = "", request =
 }
 
 export async function fetchHistory() {
-  const response = await fetch(`${API_BASE_URL}/history`);
-  if (!response.ok) {
-    throw new Error("Failed to load previous assistant history.");
+  try {
+    const response = await fetch(`${API_BASE_URL}/history`);
+    if (!response.ok) {
+      return [];
+    }
+    return await response.json();
+  } catch (e) {
+    // Backend unreachable or network error — return empty history (frontend will fallback to localStorage)
+    return [];
   }
-  return await response.json();
 }
 
 export async function sendChatMessage({ session_id, message, conversation_history = [] }) {
@@ -54,19 +59,24 @@ export async function sendChatMessage({ session_id, message, conversation_histor
 }
 
 export async function fetchSessions() {
-  const response = await fetch(`${API_BASE_URL}/chat/sessions`);
-  if (!response.ok) {
-    throw new Error("Failed to load chat sessions.");
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions`);
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (e) {
+    // Network or backend error — return empty list so frontend may use localStorage fallback
+    return [];
   }
-  return await response.json();
 }
 
 export async function fetchSessionHistory(session_id) {
-  const response = await fetch(`${API_BASE_URL}/chat/history/${session_id}`);
-  if (!response.ok) {
-    throw new Error("Failed to load session history.");
+  try {
+    const response = await fetch(`${API_BASE_URL}/chat/history/${session_id}`);
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (e) {
+    return [];
   }
-  return await response.json();
 }
 
 export async function deleteSessionHistory(session_id) {

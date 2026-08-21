@@ -13,6 +13,9 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "ai_code_assistant")
 
 # Check for direct database URLs (supporting standard env vars from providers like Railway)
+DB_TYPE = os.getenv("DB_TYPE", "sqlite").lower()
+
+# Check for direct database URLs (supporting standard env vars from providers like Railway)
 DATABASE_URL = (
     os.getenv("DATABASE_URL")
     or os.getenv("MYSQL_PUBLIC_URL")
@@ -21,17 +24,44 @@ DATABASE_URL = (
 )
 has_db_url = bool(DATABASE_URL)
 
-if DATABASE_URL:
-    # SQLAlchemy requires the dialect + driver (pymysql) for MySQL connections,
-    # but cloud providers like Railway often provide URLs starting with mysql://
-    if DATABASE_URL.startswith("mysql://"):
-        DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+if DB_TYPE == "none":
+    DATABASE_URL = None
+elif DB_TYPE == "sqlite":
+    if not DATABASE_URL or not DATABASE_URL.startswith("sqlite"):
+        DATABASE_URL = "sqlite:///./ai_code_assistant.db"
+    has_db_url = True
 else:
-    DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    # MySQL configurations
+    if DATABASE_URL:
+        # SQLAlchemy requires the dialect + driver (pymysql) for MySQL connections,
+        # but cloud providers like Railway often provide URLs starting with mysql://
+        if DATABASE_URL.startswith("mysql://"):
+            DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
+    else:
+        # If DB_HOST accidentally contains a full URL (e.g. mysql://...), treat it as DATABASE_URL
+        if isinstance(DB_HOST, str) and "://" in DB_HOST:
+            # Use DB_HOST as the base URL
+            raw = DB_HOST
+            if raw.startswith("mysql://"):
+                raw = raw.replace("mysql://", "mysql+pymysql://", 1)
+            elif raw.startswith("mysql+pymysql://"):
+                pass
+            else:
+                # If scheme missing, construct using provided parts
+                raw = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+            DATABASE_URL = raw
+            has_db_url = True
+        else:
+            DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Auto-create the database if it does not exist and running locally
-# (Cloud-managed databases usually pre-provision the DB and lack root permissions to run CREATE DATABASE)
-if not has_db_url and DB_HOST in ("localhost", "127.0.0.1"):
+# Auto-create the database only when explicitly enabled and using MySQL.
+# Cloud-managed databases usually pre-provision the DB and lack root permissions
+# to run CREATE DATABASE. To avoid noisy startup warnings on managed hosts
+# (Render, Railway, etc.) we require an explicit opt-in via
+# ENABLE_DB_AUTOCREATE=true in the environment.
+ENABLE_DB_AUTOCREATE = os.getenv("ENABLE_DB_AUTOCREATE", "false").lower() == "true"
+
+if DB_TYPE == "mysql" and ENABLE_DB_AUTOCREATE and not has_db_url and DB_HOST in ("localhost", "127.0.0.1"):
     try:
         import pymysql
         conn = pymysql.connect(
@@ -50,13 +80,26 @@ if not has_db_url and DB_HOST in ("localhost", "127.0.0.1"):
 
 # Setup SQLAlchemy engine and session factory
 try:
-    # Use pool_pre_ping to check connection health before using it
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        pool_recycle=3600
-    )
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    if DATABASE_URL is None:
+        print("Database connection disabled (DB_TYPE=none). Running stateless.")
+        engine = None
+        SessionLocal = None
+    elif DATABASE_URL.startswith("sqlite"):
+        engine = create_engine(
+            DATABASE_URL,
+            connect_args={"check_same_thread": False}
+        )
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        print(f"Database engine created successfully using SQLite (file-based).")
+    else:
+        # Use pool_pre_ping to check connection health before using it
+        engine = create_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_recycle=3600
+        )
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        print(f"Database engine created successfully using MySQL.")
 except Exception as e:
     print(f"Error creating database engine: {e}")
     engine = None
@@ -74,3 +117,4 @@ def get_db():
         yield db
     finally:
         db.close()
+

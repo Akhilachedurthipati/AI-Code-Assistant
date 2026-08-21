@@ -128,6 +128,46 @@ export default function CodeAssistant() {
     loadSessionsData();
   }, []);
 
+  // Persist sessions and messages to localStorage as a fallback when DB is unavailable
+  const LOCAL_SESSIONS_KEY = "ai_assistant_sessions";
+  const sessionStorageKey = (id) => `ai_assistant_session_${id}`;
+
+  const loadSessionsFromLocal = () => {
+    try {
+      const raw = localStorage.getItem(LOCAL_SESSIONS_KEY);
+      if (!raw) return [];
+      return JSON.parse(raw);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const saveSessionsToLocal = (sessList) => {
+    try {
+      localStorage.setItem(LOCAL_SESSIONS_KEY, JSON.stringify(sessList));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const loadMessagesFromLocal = (id) => {
+    try {
+      const raw = localStorage.getItem(sessionStorageKey(id));
+      if (!raw) return [];
+      return JSON.parse(raw);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const saveMessagesToLocal = (id, msgs) => {
+    try {
+      localStorage.setItem(sessionStorageKey(id), JSON.stringify(msgs));
+    } catch (e) {
+      // ignore
+    }
+  };
+
   // Scroll to bottom whenever messages or loading change
   useEffect(() => {
     scrollToBottom();
@@ -140,9 +180,27 @@ export default function CodeAssistant() {
   const loadSessionsData = async () => {
     try {
       const data = await fetchSessions();
-      setSessions(data || []);
+      if (data && data.length > 0) {
+        setSessions(data || []);
+        // merge into local cache
+        try {
+          const local = loadSessionsFromLocal();
+          const merged = [...data];
+          // add any local-only sessions
+          local.forEach((ls) => {
+            if (!merged.find((m) => m.session_id === ls.session_id)) merged.push(ls);
+          });
+          saveSessionsToLocal(merged);
+        } catch (e) {}
+      } else {
+        // Backend returned empty — fallback to localStorage
+        const local = loadSessionsFromLocal();
+        setSessions(local || []);
+      }
     } catch (err) {
       console.error("Failed to load sessions list: ", err);
+      const local = loadSessionsFromLocal();
+      setSessions(local || []);
     }
   };
 
@@ -176,17 +234,38 @@ export default function CodeAssistant() {
 
       // 4. Append assistant response
       const assistantMsg = { role: "assistant", message: result.message };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => {
+        const next = [...prev, assistantMsg];
+        // persist to localStorage
+        saveMessagesToLocal(sessionId, next);
+        // update sessions list local cache
+        try {
+          const now = new Date().toISOString();
+          let currentSessions = loadSessionsFromLocal();
+          const existing = currentSessions.find((s) => s.session_id === sessionId);
+          if (existing) {
+            existing.last_active = now;
+            existing.first_message = existing.first_message || (next[0] && next[0].message) || "";
+          } else {
+            currentSessions.unshift({ session_id: sessionId, last_active: now, first_message: (next[0] && next[0].message) || "" });
+          }
+          saveSessionsToLocal(currentSessions);
+          setSessions(currentSessions);
+        } catch (e) {}
+        return next;
+      });
       
       // 5. Refresh sidebar sessions
       await loadSessionsData();
     } catch (err) {
       setApiError(err.message || "Failed to contact the server. Please verify backend state.");
       // Append a system-style error message bubble
-      setMessages((prev) => [
-        ...prev,
-        { role: "system", message: `System Error: ${err.message || "Failed to contact backend."}` }
-      ]);
+      const sysMsg = { role: "system", message: `System Error: ${err.message || "Failed to contact backend."}` };
+      setMessages((prev) => {
+        const next = [...prev, sysMsg];
+        saveMessagesToLocal(sessionId, next);
+        return next;
+      });
     } finally {
       setLoading(false);
     }
@@ -208,11 +287,13 @@ export default function CodeAssistant() {
     setSessionId(sess.session_id);
     try {
       const historyData = await fetchSessionHistory(sess.session_id);
-      // Map database schema fields to UI chat properties
-      const mappedMessages = historyData.map((item) => ({
-        role: item.role,
-        message: item.message
-      }));
+      let mappedMessages = [];
+      if (historyData && historyData.length > 0) {
+        mappedMessages = historyData.map((item) => ({ role: item.role, message: item.message }));
+      } else {
+        // fallback to localStorage
+        mappedMessages = loadMessagesFromLocal(sess.session_id) || [];
+      }
       setMessages(mappedMessages);
     } catch (err) {
       setApiError("Failed to load historical messages for this session.");
