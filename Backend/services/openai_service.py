@@ -282,6 +282,54 @@ def get_chat_mock_response(messages_history: list, new_message: str) -> str:
                 "```"
             )
 
+    # General Java Query Handler for mock mode
+    elif "java" in msg_lower:
+        if "reverse" in msg_lower or "string" in msg_lower:
+            return (
+                "Here is how you can reverse a string in Java using `StringBuilder`:\n\n"
+                "```java\n"
+                "public class StringReverser {\n"
+                "    public static String reverseString(String s) {\n"
+                "        return new StringBuilder(s).reverse().toString();\n"
+                "    }\n\n"
+                "    public static void main(String[] args) {\n"
+                "        String text = \"Hello, World!\";\n"
+                "        System.out.println(reverseString(text));\n"
+                "    }\n"
+                "}\n"
+                "```"
+            )
+        elif "factorial" in msg_lower:
+            return (
+                "Here is the Java implementation of the recursive factorial function:\n\n"
+                "```java\n"
+                "public class FactorialCalculator {\n"
+                "    public static int factorial(int n) {\n"
+                "        if (n == 0) {\n"
+                "            return 1;\n"
+                "        } else {\n"
+                "            return n * factorial(n - 1);\n"
+                "        }\n"
+                "    }\n\n"
+                "    public static void main(String[] args) {\n"
+                "        int num = 5;\n"
+                "        System.out.println(\"Factorial of \" + num + \" is: \" + factorial(num));\n"
+                "    }\n"
+                "}\n"
+                "```"
+            )
+        else:
+            return (
+                "I detected you are asking about Java! Since I am running in **offline/mock mode**, here is a sample Java application structure:\n\n"
+                "```java\n"
+                "public class Main {\n"
+                "    public static void main(String[] args) {\n"
+                "        System.out.println(\"Hello from offline mock mode!\");\n"
+                "    }\n"
+                "}\n"
+                "```"
+            )
+
     # Default chatbot response for mock fallback
     else:
         return (
