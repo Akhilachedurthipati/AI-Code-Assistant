@@ -330,40 +330,50 @@ def get_chat_mock_response(messages_history: list, new_message: str) -> str:
                 "```"
             )
 
-        # Check for other programming languages in mock mode
-        supported_langs = {
-            "c++": ("C++", "```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello from offline mock mode!\\n\";\n    return 0;\n}\n```"),
-            "cpp": ("C++", "```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello from offline mock mode!\\n\";\n    return 0;\n}\n```"),
-            "c#": ("C#", "```csharp\nusing System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello from offline mock mode!\");\n    }\n}\n```"),
-            "csharp": ("C#", "```csharp\nusing System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello from offline mock mode!\");\n    }\n}\n```"),
-            "go": ("Go", "```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from offline mock mode!\")\n}\n```"),
-            "golang": ("Go", "```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from offline mock mode!\")\n}\n```"),
-            "rust": ("Rust", "```rust\nfn main() {\n    println!(\"Hello from offline mock mode!\");\n}\n```"),
-            "typescript": ("TypeScript", "```typescript\nconst message: string = \"Hello from offline mock mode!\";\nconsole.log(message);\n```"),
-            "php": ("PHP", "```php\n<?php\necho \"Hello from offline mock mode!\";\n?>\n```"),
-            "ruby": ("Ruby", "```ruby\nputs \"Hello from offline mock mode!\"\n```"),
-            "sql": ("SQL", "```sql\nSELECT 'Hello from offline mock mode!' AS message;\n```"),
-            "swift": ("Swift", "```swift\nprint(\"Hello from offline mock mode!\")\n```"),
-            "kotlin": ("Kotlin", "```kotlin\nfun main() {\n    println(\"Hello from offline mock mode!\")\n}\n```"),
-        }
-        
-        for lang_key, (lang_name, lang_code) in supported_langs.items():
-            if lang_key in msg_lower:
+    # Check for other programming languages in mock mode
+    supported_langs = {
+        "c++": ("C++", "```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello from offline mock mode!\\n\";\n    return 0;\n}\n```"),
+        "cpp": ("C++", "```cpp\n#include <iostream>\n\nint main() {\n    std::cout << \"Hello from offline mock mode!\\n\";\n    return 0;\n}\n```"),
+        "c#": ("C#", "```csharp\nusing System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello from offline mock mode!\");\n    }\n}\n```"),
+        "csharp": ("C#", "```csharp\nusing System;\n\nclass Program {\n    static void Main() {\n        Console.WriteLine(\"Hello from offline mock mode!\");\n    }\n}\n```"),
+        "go": ("Go", "```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from offline mock mode!\")\n}\n```"),
+        "golang": ("Go", "```go\npackage main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from offline mock mode!\")\n}\n```"),
+        "rust": ("Rust", "```rust\nfn main() {\n    println!(\"Hello from offline mock mode!\");\n}\n```"),
+        "typescript": ("TypeScript", "```typescript\nconst message: string = \"Hello from offline mock mode!\";\nconsole.log(message);\n```"),
+        "php": ("PHP", "```php\n<?php\necho \"Hello from offline mock mode!\";\n?>\n```"),
+        "ruby": ("Ruby", "```ruby\nputs \"Hello from offline mock mode!\"\n```"),
+        "sql": ("SQL", "```sql\nSELECT 'Hello from offline mock mode!' AS message;\n```"),
+        "swift": ("Swift", "```swift\nprint(\"Hello from offline mock mode!\")\n```"),
+        "kotlin": ("Kotlin", "```kotlin\nfun main() {\n    println(\"Hello from offline mock mode!\")\n}\n```"),
+        "c": ("C", "```c\n#include <stdio.h>\n#include <string.h>\n\nvoid reverse(char* str) {\n    int len = strlen(str);\n    for (int i = 0; i < len / 2; i++) {\n        char temp = str[i];\n        str[i] = str[len - i - 1];\n        str[len - i - 1] = temp;\n    }\n}\n\nint main() {\n    char str[] = \"Hello from offline mock mode!\";\n    reverse(str);\n    printf(\"%s\\n\", str);\n    return 0;\n}\n```"),
+    }
+    
+    for lang_key, (lang_name, lang_code) in supported_langs.items():
+        if lang_key == "c":
+            # Avoid false positives by ensuring 'c' is a standalone word
+            if "c" in msg_lower.split():
                 return (
                     f"I detected you are asking about **{lang_name}**!\n\n"
                     f"Since the server is running in **offline/mock mode** (no OpenAI API key configured), "
                     f"here is a sample {lang_name} snippet:\n\n{lang_code}"
                 )
+        elif lang_key in msg_lower:
+            return (
+                f"I detected you are asking about **{lang_name}**!\n\n"
+                f"Since the server is running in **offline/mock mode** (no OpenAI API key configured), "
+                f"here is a sample {lang_name} snippet:\n\n{lang_code}"
+            )
 
-        return (
-            "Hello! I am your AI Code Assistant chatbot.\n\n"
-            "I'm currently running in **offline/mock mode** because no OpenAI API key is configured. "
-            "To activate live GPT completions, please set your API key in `Backend/.env`.\n\n"
-            "However, you can test me with coding tasks like:\n"
-            "- *'Write a Python program to reverse a string.'*\n"
-            "- *'Explain the code you just gave me.'*\n"
-            "- *'Find the error in this code: print(numbers[5])'*\n"
-            "- *'Complete this: def factorial(n): if n == 0: return 1 else:'*\n"
-            "- *'Convert the previous Python program to Java.'*"
-        )
+    return (
+        "Hello! I am your AI Code Assistant chatbot.\n\n"
+        "I'm currently running in **offline/mock mode** because no OpenAI API key is configured. "
+        "To activate live GPT completions, please set your API key in `Backend/.env`.\n\n"
+        "However, you can test me with coding tasks like:\n"
+        "- *'Write a Python program to reverse a string.'*\n"
+        "- *'Explain the code you just gave me.'*\n"
+        "- *'Find the error in this code: print(numbers[5])'*\n"
+        "- *'Complete this: def factorial(n): if n == 0: return 1 else:'*\n"
+        "- *'Convert the previous Python program to Java.'*"
+    )
+
 
