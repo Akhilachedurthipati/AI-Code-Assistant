@@ -27,12 +27,17 @@ app.add_middleware(
 # Startup database initialization
 @app.on_event("startup")
 def startup_db_event():
+    # Print environment variable keys (keys only, no values) to help debug config issues
+    env_keys = [k for k in os.environ.keys() if "KEY" in k or "API" in k or "DB" in k or "HOST" in k or "URL" in k]
+    print(f"Loaded config keys on startup: {env_keys}")
+    
     if engine is not None:
         try:
             Base.metadata.create_all(bind=engine)
             print("Database tables initialized successfully.")
         except Exception as e:
             print(f"Warning: Failed to create database tables during startup: {e}")
+
 
 # Include API routes
 app.include_router(code_assistant.router, prefix="/api")
