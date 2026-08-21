@@ -5,12 +5,26 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def get_env_variable_robust(name: str) -> str:
+    """Retrieves env variable case-insensitively and strips whitespace/quotes."""
+    val = os.getenv(name)
+    if val:
+        return val.strip().strip('"').strip("'")
+    
+    # Case-insensitive fallback
+    name_lower = name.lower()
+    for k, v in os.environ.items():
+        if k.lower() == name_lower:
+            return v.strip().strip('"').strip("'")
+    return None
+
 # Instantiate the client (Gemini or OpenAI) using the OpenAI SDK
-api_key = os.getenv("OPENAI_API_KEY")
-gemini_key = os.getenv("GEMINI_API_KEY")
+api_key = get_env_variable_robust("OPENAI_API_KEY")
+gemini_key = get_env_variable_robust("GEMINI_API_KEY")
 
 client = None
 model_name = "gpt-4o-mini"
+
 
 # Prioritize Gemini API Key if available (offering a free tier)
 if gemini_key and gemini_key != "your_gemini_api_key_here":
