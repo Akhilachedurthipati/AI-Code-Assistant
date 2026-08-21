@@ -20,10 +20,11 @@ def get_env_variable_robust(name: str) -> str:
 
 # Instantiate the client (Gemini or OpenAI) using the OpenAI SDK
 api_key = get_env_variable_robust("OPENAI_API_KEY")
-gemini_key = get_env_variable_robust("GEMINI_API_KEY")
+gemini_key = get_env_variable_robust("GEMINI_API_KEY") or get_env_variable_robust("GEMINII_API_KEY")
 
 client = None
 model_name = "gpt-4o-mini"
+
 
 
 # Prioritize Gemini API Key if available (offering a free tier)
