@@ -62,7 +62,7 @@ def get_client() -> tuple[OpenAI, str]:
         )
 
         # Current Gemini model
-        return client, "gemini-2.0-flash"
+        return client, "gemini-3.6-flash"
 
     # Use OpenAI if configured
     if openai_key and openai_key != "your_openai_api_key_here":
